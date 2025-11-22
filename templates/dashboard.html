@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Mia Bot{% endblock %}
+
+{% block content %}
+<div class="header">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <p class="text-gray-600">Visão geral do sistema</p>
+    </div>
+    <div class="flex items-center gap-4">
+        <span class="text-gray-600">Bem-vindo, <strong>{{ username }}</strong></span>
+        <a href="/admin/logout" class="text-red-600 hover:text-red-700">
+            <i class="fas fa-sign-out-alt"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total de Conversas -->
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="stat-icon bg-blue-100 text-blue-600">
+                <i class="fas fa-comments"></i>
+            </div>
+            <span class="badge badge-info">Total</span>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-800 mb-1" id="total-conversas">{{ stats.total_conversas or 0 }}</h3>
+        <p class="text-gray-600 text-sm">Conversas</p>
+    </div>
+    
+    <!-- Conversas Hoje -->
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="stat-icon bg-green-100 text-green-600">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+            <span class="badge badge-success">Hoje</span>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-800 mb-1" id="conversas-hoje">{{ stats.conversas_hoje or 0 }}</h3>
+        <p class="text-gray-600 text-sm">Conversas hoje</p>
+    </div>
+    
+    <!-- Total de Leads -->
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="stat-icon bg-purple-100 text-purple-600">
+                <i class="fas fa-users"></i>
+            </div>
+            <span class="badge badge-info">Leads</span>
+        </div>
+        <h3 class="text-3xl font-bold text-gray-800 mb-1" id="total-leads">{{ stats.total_leads or 0 }}</h3>
+        <p class="text-gray-600 text-sm">Leads capturados</p>
+    </div>
+    
+    <!-- Status do Bot -->
+    <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+            <div class="stat-icon bg-green-100 text-green-600">
+                <i class="fas fa-robot"></i>
+            </div>
+            <span class="badge badge-success" id="bot-status-badge">Ativo</span>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-1">Bot Status</h3>
+        <p class="text-gray-600 text-sm">Sistema operacional</p>
+    </div>
+</div>
+
+<!-- Gráficos e Tabelas -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Conversas por Canal -->
+    <div class="card">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-pie text-blue-600"></i>
+            Conversas por Canal
+        </h3>
+        <div id="conversas-canal" class="space-y-3">
+            <!-- Será preenchido via JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Status dos Canais -->
+    <div class="card">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fas fa-broadcast-tower text-green-600"></i>
+            Status dos Canais
+        </h3>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <i class="fab fa-whatsapp text-green-600 text-2xl"></i>
+                    <span class="font-semibold">WhatsApp</span>
+                </div>
+                <span class="badge badge-success" id="whatsapp-status">Ativo</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <i class="fab fa-instagram text-pink-600 text-2xl"></i>
+                    <span class="font-semibold">Instagram</span>
+                </div>
+                <span class="badge badge-warning" id="instagram-status">Preparado</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-globe text-blue-600 text-2xl"></i>
+                    <span class="font-semibold">Web Chat</span>
+                </div>
+                <span class="badge badge-warning" id="web-status">Preparado</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Conversas -->
+<div class="card">
+    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-history text-purple-600"></i>
+        Últimas Conversas
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Canal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Mensagem</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Data</th>
+                </tr>
+            </thead>
+            <tbody id="ultimas-conversas">
+                <!-- Será preenchido via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Atualizar estatísticas a cada 30 segundos
+    setInterval(loadStats, 30000);
+    
+    // Carregar estatísticas ao iniciar
+    loadStats();
+    
+    function loadStats() {
+        $.get('/admin/api/stats', function(data) {
+            // Atualizar números
+            $('#total-conversas').text(data.total_conversas || 0);
+            $('#conversas-hoje').text(data.conversas_hoje || 0);
+            $('#total-leads').text(data.total_leads || 0);
+            
+            // Atualizar status dos canais
+            updateChannelStatus('whatsapp', data.canais.whatsapp);
+            updateChannelStatus('instagram', data.canais.instagram);
+            updateChannelStatus('web', data.canais.web);
+            
+            // Atualizar conversas por canal
+            updateConversasPorCanal(data.conversas_por_canal);
+            
+            // Atualizar últimas conversas
+            updateUltimasConversas(data.ultimas_conversas);
+        });
+    }
+    
+    function updateChannelStatus(canal, enabled) {
+        const badge = $(`#${canal}-status`);
+        if (enabled) {
+            badge.removeClass('badge-warning').addClass('badge-success').text('Ativo');
+        } else {
+            badge.removeClass('badge-success').addClass('badge-warning').text('Preparado');
+        }
+    }
+    
+    function updateConversasPorCanal(data) {
+        const container = $('#conversas-canal');
+        container.empty();
+        
+        const canais = {
+            'whatsapp': { icon: 'fab fa-whatsapp', color: 'green', name: 'WhatsApp' },
+            'instagram': { icon: 'fab fa-instagram', color: 'pink', name: 'Instagram' },
+            'web': { icon: 'fas fa-globe', color: 'blue', name: 'Web Chat' }
+        };
+        
+        for (const [canal, count] of Object.entries(data)) {
+            const info = canais[canal] || { icon: 'fas fa-comment', color: 'gray', name: canal };
+            container.append(`
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i class="${info.icon} text-${info.color}-600 text-xl"></i>
+                        <span class="font-semibold">${info.name}</span>
+                    </div>
+                    <span class="text-2xl font-bold text-gray-800">${count}</span>
+                </div>
+            `);
+        }
+    }
+    
+    function updateUltimasConversas(conversas) {
+        const tbody = $('#ultimas-conversas');
+        tbody.empty();
+        
+        if (!conversas || conversas.length === 0) {
+            tbody.append('<tr><td colspan="4" class="text-center py-4 text-gray-500">Nenhuma conversa recente</td></tr>');
+            return;
+        }
+        
+        conversas.forEach(conv => {
+            const data = new Date(conv.timestamp).toLocaleString('pt-BR');
+            const mensagem = conv.message.substring(0, 50) + (conv.message.length > 50 ? '...' : '');
+            
+            tbody.append(`
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4">${conv.phone}</td>
+                    <td class="py-3 px-4">
+                        <span class="badge badge-info">${conv.canal}</span>
+                    </td>
+                    <td class="py-3 px-4 text-gray-600">${mensagem}</td>
+                    <td class="py-3 px-4 text-sm text-gray-500">${data}</td>
+                </tr>
+            `);
+        });
+    }
+</script>
+{% endblock %}

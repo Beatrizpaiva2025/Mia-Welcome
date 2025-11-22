@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Conversas em Tempo Real - Mia Bot{% endblock %}
+
+{% block content %}
+<div class="header">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-comments text-purple-600"></i>
+            Conversas em Tempo Real
+        </h1>
+        <p class="text-gray-600">Monitoramento e gerenciamento de atendimentos</p>
+    </div>
+    <div class="flex items-center gap-4">
+        <button onclick="loadConversas()" class="text-blue-600 hover:text-blue-700 font-semibold">
+            <i class="fas fa-sync-alt mr-2"></i>Atualizar
+        </button>
+        <a href="/admin/dashboard" class="text-blue-600 hover:text-blue-700 font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-6">
+    <div class="flex items-center gap-4">
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Filtrar por Canal</label>
+            <select id="filter-canal" onchange="loadConversas()" class="w-full p-2 border-2 border-gray-200 rounded-lg">
+                <option value="">Todos os canais</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="instagram">Instagram</option>
+                <option value="web">Web Chat</option>
+            </select>
+        </div>
+        
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Filtrar por Modo</label>
+            <select id="filter-modo" onchange="loadConversas()" class="w-full p-2 border-2 border-gray-200 rounded-lg">
+                <option value="">Todos</option>
+                <option value="ai">IA</option>
+                <option value="human">Humano</option>
+            </select>
+        </div>
+        
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Buscar Cliente</label>
+            <input type="text" id="search-phone" placeholder="Telefone..." class="w-full p-2 border-2 border-gray-200 rounded-lg">
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Conversas -->
+<div class="card">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-800">Conversas Ativas</h3>
+        <span class="badge badge-info" id="total-conversas">0 conversas</span>
+    </div>
+    
+    <div id="conversas-list" class="space-y-3">
+        <!-- Será preenchido via JavaScript -->
+    </div>
+</div>
+
+<!-- Modal: Ver Histórico -->
+<div id="modal-historico" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800" id="modal-title">Histórico de Conversa</h3>
+            <button onclick="closeModalHistorico()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+        
+        <div id="historico-content" class="space-y-3 mb-4">
+            <!-- Será preenchido via JavaScript -->
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="transferToAI()" class="btn-primary flex-1">
+                <i class="fas fa-robot mr-2"></i>Transferir para IA
+            </button>
+            <button onclick="transferToHuman()" class="btn-warning flex-1">
+                <i class="fas fa-user mr-2"></i>Transferir para Humano
+            </button>
+            <button onclick="closeModalHistorico()" class="btn-danger flex-1">
+                <i class="fas fa-times mr-2"></i>Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPhone = '';
+    let currentCanal = '';
+    
+    // Carregar conversas ao iniciar
+    $(document).ready(function() {
+        loadConversas();
+        
+        // Atualizar automaticamente a cada 10 segundos
+        setInterval(loadConversas, 10000);
+    });
+    
+    function loadConversas() {
+        $.get('/admin/api/conversas/tempo-real', function(data) {
+            renderConversas(data);
+        });
+    }
+    
+    function renderConversas(conversas) {
+        const container = $('#conversas-list');
+        container.empty();
+        
+        if (!conversas || conversas.length === 0) {
+            container.append('<p class="text-gray-500 text-center py-8">Nenhuma conversa recente</p>');
+            $('#total-conversas').text('0 conversas');
+            return;
+        }
+        
+        // Aplicar filtros
+        const canalFilter = $('#filter-canal').val();
+        const modoFilter = $('#filter-modo').val();
+        const searchPhone = $('#search-phone').val().toLowerCase();
+        
+        let filtered = conversas;
+        
+        if (canalFilter) {
+            filtered = filtered.filter(c => c.canal === canalFilter);
+        }
+        
+        if (modoFilter) {
+            filtered = filtered.filter(c => c.mode === modoFilter);
+        }
+        
+        if (searchPhone) {
+            filtered = filtered.filter(c => c.phone.toLowerCase().includes(searchPhone));
+        }
+        
+        $('#total-conversas').text(`${filtered.length} conversas`);
+        
+        filtered.forEach(conv => {
+            const canalIcon = {
+                'whatsapp': 'fab fa-whatsapp text-green-600',
+                'instagram': 'fab fa-instagram text-pink-600',
+                'web': 'fas fa-globe text-blue-600'
+            }[conv.canal] || 'fas fa-comment text-gray-600';
+            
+            const modeBadge = conv.mode === 'human' 
+                ? '<span class="badge badge-warning">Humano</span>' 
+                : '<span class="badge badge-success">IA</span>';
+            
+            const roleIcon = conv.last_role === 'user' 
+                ? '<i class="fas fa-user text-blue-600"></i>' 
+                : '<i class="fas fa-robot text-green-600"></i>';
+            
+            const timestamp = new Date(conv.last_timestamp).toLocaleString('pt-BR');
+            
+            container.append(`
+                <div class="p-4 bg-gray-50 rounded-lg border-l-4 ${conv.mode === 'human' ? 'border-yellow-500' : 'border-green-500'} hover:bg-gray-100 cursor-pointer" onclick="showHistorico('${conv.phone}', '${conv.canal}')">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i class="${canalIcon} text-2xl"></i>
+                                <div>
+                                    <h4 class="font-bold text-gray-800">${conv.phone}</h4>
+                                    <p class="text-sm text-gray-500">${timestamp}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2 mt-2">
+                                ${roleIcon}
+                                <p class="text-gray-700 text-sm flex-1">${conv.last_message.substring(0, 100)}${conv.last_message.length > 100 ? '...' : ''}</p>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex flex-col items-end gap-2">
+                            ${modeBadge}
+                            <span class="badge badge-info">${conv.message_count} msgs</span>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+    
+    function showHistorico(phone, canal) {
+        currentPhone = phone;
+        currentCanal = canal;
+        
+        $('#modal-title').text(`Histórico: ${phone} (${canal})`);
+        $('#modal-historico').removeClass('hidden');
+        
+        // Carregar histórico
+        $.get(`/admin/api/conversas/${phone}?canal=${canal}`, function(data) {
+            renderHistorico(data);
+        });
+    }
+    
+    function renderHistorico(mensagens) {
+        const container = $('#historico-content');
+        container.empty();
+        
+        if (!mensagens || mensagens.length === 0) {
+            container.append('<p class="text-gray-500 text-center py-4">Nenhuma mensagem encontrada</p>');
+            return;
+        }
+        
+        mensagens.forEach(msg => {
+            const isUser = msg.role === 'user';
+            const bgColor = isUser ? 'bg-blue-100' : 'bg-green-100';
+            const icon = isUser ? 'fas fa-user text-blue-600' : 'fas fa-robot text-green-600';
+            const timestamp = new Date(msg.timestamp).toLocaleString('pt-BR');
+            
+            container.append(`
+                <div class="p-3 ${bgColor} rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <i class="${icon}"></i>
+                        <div class="flex-1">
+                            <p class="text-gray-800">${msg.message}</p>
+                            <p class="text-xs text-gray-500 mt-1">${timestamp}</p>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+        
+        // Scroll para o final
+        container.scrollTop(container[0].scrollHeight);
+    }
+    
+    function closeModalHistorico() {
+        $('#modal-historico').addClass('hidden');
+        currentPhone = '';
+        currentCanal = '';
+    }
+    
+    function transferToAI() {
+        if (!currentPhone) return;
+        
+        if (!confirm('Transferir esta conversa para a IA?')) return;
+        
+        $.ajax({
+            url: '/admin/api/conversa/transfer',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                phone: currentPhone,
+                canal: currentCanal,
+                mode: 'ai'
+            }),
+            success: function(data) {
+                alert('✅ Conversa transferida para IA!');
+                closeModalHistorico();
+                loadConversas();
+            },
+            error: function(xhr) {
+                alert('❌ Erro ao transferir conversa');
+            }
+        });
+    }
+    
+    function transferToHuman() {
+        if (!currentPhone) return;
+        
+        if (!confirm('Transferir esta conversa para atendimento humano?')) return;
+        
+        $.ajax({
+            url: '/admin/api/conversa/transfer',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                phone: currentPhone,
+                canal: currentCanal,
+                mode: 'human'
+            }),
+            success: function(data) {
+                alert('✅ Conversa transferida para atendimento humano!');
+                closeModalHistorico();
+                loadConversas();
+            },
+            error: function(xhr) {
+                alert('❌ Erro ao transferir conversa');
+            }
+        });
+    }
+</script>
+{% endblock %}

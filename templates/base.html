@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mia Bot - Legacy Translations{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --legacy-blue: #2B4C7E;
+            --legacy-blue-dark: #1E3A5F;
+            --legacy-blue-light: #3D5A80;
+            --legacy-accent: #4A90E2;
+            --legacy-green: #10B981;
+            --legacy-yellow: #F59E0B;
+            --legacy-red: #EF4444;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--legacy-blue-dark) 0%, var(--legacy-blue) 100%);
+            min-height: 100vh;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        
+        .btn-primary {
+            background: var(--legacy-green);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-warning {
+            background: var(--legacy-yellow);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-warning:hover {
+            background: #D97706;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: var(--legacy-red);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-danger:hover {
+            background: #DC2626;
+            transform: translateY(-2px);
+        }
+        
+        .sidebar {
+            background: var(--legacy-blue-dark);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .sidebar-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: var(--legacy-blue-light);
+            color: white;
+        }
+        
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .badge-warning {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+        
+        .badge-danger {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+        
+        .badge-info {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="sidebar w-64 fixed h-screen">
+            <div class="mb-8">
+                <h1 class="text-white text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-robot"></i>
+                    Mia Bot
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">Legacy Translations</p>
+            </div>
+            
+            <nav>
+                <a href="/admin/dashboard" class="sidebar-link {% if request.url.path == '/admin/dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/admin/controle" class="sidebar-link {% if request.url.path == '/admin/controle' %}active{% endif %}">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Controle do Bot</span>
+                </a>
+                
+                <a href="/admin/conversas-tempo-real" class="sidebar-link {% if request.url.path == '/admin/conversas-tempo-real' %}active{% endif %}">
+                    <i class="fas fa-comments"></i>
+                    <span>Conversas</span>
+                </a>
+                
+                <a href="/admin/training" class="sidebar-link {% if request.url.path == '/admin/training' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>Treinamento</span>
+                </a>
+                
+                <a href="/admin/leads" class="sidebar-link {% if request.url.path == '/admin/leads' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>Leads</span>
+                </a>
+                
+                <hr class="my-4 border-gray-700">
+                
+                <a href="/admin/logout" class="sidebar-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="ml-64 flex-1 p-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

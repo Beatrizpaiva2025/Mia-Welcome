@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Treinamento - Mia Bot{% endblock %}
+
+{% block content %}
+<div class="header">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-graduation-cap text-blue-600"></i>
+            Treinamento da Mia
+        </h1>
+        <p class="text-gray-600">Configure a personalidade e conhecimento da IA</p>
+    </div>
+    <a href="/admin/dashboard" class="text-blue-600 hover:text-blue-700 font-semibold">
+        <i class="fas fa-arrow-left mr-2"></i>Voltar
+    </a>
+</div>
+
+<!-- Tabs -->
+<div class="mb-6">
+    <div class="flex gap-2 border-b-2 border-gray-200">
+        <button onclick="showTab('personalidade')" id="tab-personalidade" class="px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600">
+            <i class="fas fa-user-circle mr-2"></i>Personalidade
+        </button>
+        <button onclick="showTab('conhecimento')" id="tab-conhecimento" class="px-6 py-3 font-semibold text-gray-600 hover:text-blue-600">
+            <i class="fas fa-book mr-2"></i>Base de Conhecimento
+        </button>
+        <button onclick="showTab('faqs')" id="tab-faqs" class="px-6 py-3 font-semibold text-gray-600 hover:text-blue-600">
+            <i class="fas fa-question-circle mr-2"></i>FAQs
+        </button>
+    </div>
+</div>
+
+<!-- Tab: Personalidade -->
+<div id="content-personalidade" class="tab-content">
+    <div class="card">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Personalidade da Mia</h3>
+        
+        <form id="form-personalidade">
+            <div class="mb-6">
+                <label class="block font-semibold text-gray-700 mb-2">
+                    <i class="fas fa-bullseye text-blue-600 mr-2"></i>Objetivos
+                </label>
+                <textarea id="goals" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Ex: Ajudar clientes com tradução de documentos"></textarea>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block font-semibold text-gray-700 mb-2">
+                    <i class="fas fa-comment-dots text-green-600 mr-2"></i>Tom de Voz
+                </label>
+                <textarea id="tone" rows="3" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Ex: Profissional, educada e prestativa"></textarea>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block font-semibold text-gray-700 mb-2">
+                    <i class="fas fa-ban text-red-600 mr-2"></i>Restrições
+                </label>
+                <textarea id="restrictions" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Ex: Não fazer traduções completas"></textarea>
+            </div>
+            
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save mr-2"></i>Salvar Personalidade
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Tab: Base de Conhecimento -->
+<div id="content-conhecimento" class="tab-content hidden">
+    <div class="card mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Base de Conhecimento</h3>
+            <button onclick="showAddKnowledge()" class="btn-primary">
+                <i class="fas fa-plus mr-2"></i>Adicionar
+            </button>
+        </div>
+        
+        <div id="knowledge-list" class="space-y-3"></div>
+    </div>
+    
+    <!-- Modal -->
+    <div id="modal-knowledge" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-knowledge-title">Adicionar Conhecimento</h3>
+            
+            <form id="form-knowledge">
+                <input type="hidden" id="knowledge-id">
+                
+                <div class="mb-4">
+                    <label class="block font-semibold text-gray-700 mb-2">Título</label>
+                    <input type="text" id="knowledge-title" class="w-full p-3 border-2 border-gray-200 rounded-lg" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block font-semibold text-gray-700 mb-2">Conteúdo</label>
+                    <textarea id="knowledge-content" rows="6" class="w-full p-3 border-2 border-gray-200 rounded-lg" required></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">Salvar</button>
+                    <button type="button" onclick="closeModalKnowledge()" class="btn-danger flex-1">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Tab: FAQs -->
+<div id="content-faqs" class="tab-content hidden">
+    <div class="card mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800">Perguntas Frequentes</h3>
+            <button onclick="showAddFaq()" class="btn-primary">
+                <i class="fas fa-plus mr-2"></i>Adicionar
+            </button>
+        </div>
+        
+        <div id="faq-list" class="space-y-3"></div>
+    </div>
+    
+    <!-- Modal -->
+    <div id="modal-faq" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-faq-title">Adicionar FAQ</h3>
+            
+            <form id="form-faq">
+                <input type="hidden" id="faq-id">
+                
+                <div class="mb-4">
+                    <label class="block font-semibold text-gray-700 mb-2">Pergunta</label>
+                    <input type="text" id="faq-question" class="w-full p-3 border-2 border-gray-200 rounded-lg" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block font-semibold text-gray-700 mb-2">Resposta</label>
+                    <textarea id="faq-answer" rows="6" class="w-full p-3 border-2 border-gray-200 rounded-lg" required></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">Salvar</button>
+                    <button type="button" onclick="closeModalFaq()" class="btn-danger flex-1">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        loadBotData();
+    });
+    
+    function loadBotData() {
+        $.get('/admin/api/bot', function(data) {
+            const personality = data.personality || {};
+            $('#goals').val((personality.goals || []).join('\n'));
+            $('#tone').val(personality.tone || '');
+            $('#restrictions').val((personality.restrictions || []).join('\n'));
+            
+            renderKnowledgeList(data.knowledge_base || []);
+            renderFaqList(data.faqs || []);
+        });
+    }
+    
+    function showTab(tab) {
+        $('.tab-content').addClass('hidden');
+        $(`#content-${tab}`).removeClass('hidden');
+        $('[id^="tab-"]').removeClass('text-blue-600 border-b-2 border-blue-600').addClass('text-gray-600');
+        $(`#tab-${tab}`).removeClass('text-gray-600').addClass('text-blue-600 border-b-2 border-blue-600');
+    }
+    
+    $('#form-personalidade').submit(function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/admin/api/personality',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                goals: $('#goals').val().split('\n').filter(g => g.trim()),
+                tone: $('#tone').val().trim(),
+                restrictions: $('#restrictions').val().split('\n').filter(r => r.trim())
+            }),
+            success: () => alert('✅ Personalidade atualizada!'),
+            error: () => alert('❌ Erro ao salvar')
+        });
+    });
+    
+    function renderKnowledgeList(items) {
+        const container = $('#knowledge-list');
+        container.empty();
+        if (!items || items.length === 0) {
+            container.append('<p class="text-gray-500 text-center py-4">Nenhum conhecimento cadastrado</p>');
+            return;
+        }
+        items.forEach(item => {
+            container.append(`
+                <div class="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 mb-2">${item.title}</h4>
+                            <p class="text-gray-600 text-sm">${item.content.substring(0, 150)}...</p>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick='editKnowledge(${JSON.stringify(item)})' class="text-blue-600"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteKnowledge('${item.id}')" class="text-red-600"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+    
+    function showAddKnowledge() {
+        $('#modal-knowledge-title').text('Adicionar Conhecimento');
+        $('#knowledge-id, #knowledge-title, #knowledge-content').val('');
+        $('#modal-knowledge').removeClass('hidden');
+    }
+    
+    function editKnowledge(item) {
+        $('#modal-knowledge-title').text('Editar Conhecimento');
+        $('#knowledge-id').val(item.id);
+        $('#knowledge-title').val(item.title);
+        $('#knowledge-content').val(item.content);
+        $('#modal-knowledge').removeClass('hidden');
+    }
+    
+    function closeModalKnowledge() {
+        $('#modal-knowledge').addClass('hidden');
+    }
+    
+    $('#form-knowledge').submit(function(e) {
+        e.preventDefault();
+        const id = $('#knowledge-id').val();
+        $.ajax({
+            url: id ? `/admin/api/knowledge/${id}` : '/admin/api/knowledge',
+            method: id ? 'PUT' : 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                title: $('#knowledge-title').val().trim(),
+                content: $('#knowledge-content').val().trim()
+            }),
+            success: () => {
+                alert('✅ Conhecimento salvo!');
+                closeModalKnowledge();
+                loadBotData();
+            },
+            error: () => alert('❌ Erro ao salvar')
+        });
+    });
+    
+    function deleteKnowledge(id) {
+        if (!confirm('Remover este conhecimento?')) return;
+        $.ajax({
+            url: `/admin/api/knowledge/${id}`,
+            method: 'DELETE',
+            success: () => {
+                alert('✅ Removido!');
+                loadBotData();
+            },
+            error: () => alert('❌ Erro ao remover')
+        });
+    }
+    
+    function renderFaqList(items) {
+        const container = $('#faq-list');
+        container.empty();
+        if (!items || items.length === 0) {
+            container.append('<p class="text-gray-500 text-center py-4">Nenhuma FAQ cadastrada</p>');
+            return;
+        }
+        items.forEach(item => {
+            container.append(`
+                <div class="p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 mb-2">${item.question}</h4>
+                            <p class="text-gray-600 text-sm">${item.answer}</p>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick='editFaq(${JSON.stringify(item)})' class="text-blue-600"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteFaq('${item.id}')" class="text-red-600"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+    
+    function showAddFaq() {
+        $('#modal-faq-title').text('Adicionar FAQ');
+        $('#faq-id, #faq-question, #faq-answer').val('');
+        $('#modal-faq').removeClass('hidden');
+    }
+    
+    function editFaq(item) {
+        $('#modal-faq-title').text('Editar FAQ');
+        $('#faq-id').val(item.id);
+        $('#faq-question').val(item.question);
+        $('#faq-answer').val(item.answer);
+        $('#modal-faq').removeClass('hidden');
+    }
+    
+    function closeModalFaq() {
+        $('#modal-faq').addClass('hidden');
+    }
+    
+    $('#form-faq').submit(function(e) {
+        e.preventDefault();
+        const id = $('#faq-id').val();
+        $.ajax({
+            url: id ? `/admin/api/faq/${id}` : '/admin/api/faq',
+            method: id ? 'PUT' : 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                question: $('#faq-question').val().trim(),
+                answer: $('#faq-answer').val().trim()
+            }),
+            success: () => {
+                alert('✅ FAQ salva!');
+                closeModalFaq();
+                loadBotData();
+            },
+            error: () => alert('❌ Erro ao salvar')
+        });
+    });
+    
+    function deleteFaq(id) {
+        if (!confirm('Remover esta FAQ?')) return;
+        $.ajax({
+            url: `/admin/api/faq/${id}`,
+            method: 'DELETE',
+            success: () => {
+                alert('✅ Removida!');
+                loadBotData();
+            },
+            error: () => alert('❌ Erro ao remover')
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Leads - Mia Bot{% endblock %}
+
+{% block content %}
+<div class="header">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fas fa-users text-purple-600"></i>
+            Gestão de Leads
+        </h1>
+        <p class="text-gray-600">Acompanhe e gerencie seus leads capturados</p>
+    </div>
+    <div class="flex items-center gap-4">
+        <button onclick="showAddLead()" class="btn-primary">
+            <i class="fas fa-plus mr-2"></i>Novo Lead
+        </button>
+        <a href="/admin/dashboard" class="text-blue-600 hover:text-blue-700 font-semibold">
+            <i class="fas fa-arrow-left mr-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Estatísticas -->
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+    <div class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <h3 class="text-3xl font-bold mb-1" id="stat-total">0</h3>
+        <p class="text-sm opacity-90">Total de Leads</p>
+    </div>
+    
+    <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+        <h3 class="text-3xl font-bold mb-1" id="stat-novo">0</h3>
+        <p class="text-sm opacity-90">Novos</p>
+    </div>
+    
+    <div class="card bg-gradient-to-br from-yellow-500 to-yellow-600 text-white">
+        <h3 class="text-3xl font-bold mb-1" id="stat-contato">0</h3>
+        <p class="text-sm opacity-90">Em Contato</p>
+    </div>
+    
+    <div class="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+        <h3 class="text-3xl font-bold mb-1" id="stat-negociacao">0</h3>
+        <p class="text-sm opacity-90">Negociação</p>
+    </div>
+    
+    <div class="card bg-gradient-to-br from-pink-500 to-pink-600 text-white">
+        <h3 class="text-3xl font-bold mb-1" id="stat-ganho">0</h3>
+        <p class="text-sm opacity-90">Ganhos</p>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-6">
+    <div class="flex items-center gap-4">
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+            <select id="filter-status" onchange="loadLeads()" class="w-full p-2 border-2 border-gray-200 rounded-lg">
+                <option value="">Todos</option>
+                <option value="novo">Novo</option>
+                <option value="contato">Em Contato</option>
+                <option value="negociacao">Negociação</option>
+                <option value="ganho">Ganho</option>
+                <option value="perdido">Perdido</option>
+            </select>
+        </div>
+        
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Canal</label>
+            <select id="filter-canal" onchange="loadLeads()" class="w-full p-2 border-2 border-gray-200 rounded-lg">
+                <option value="">Todos</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="instagram">Instagram</option>
+                <option value="web">Web</option>
+            </select>
+        </div>
+        
+        <div class="flex-1">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Buscar</label>
+            <input type="text" id="search-lead" onkeyup="filterLeads()" placeholder="Nome ou telefone..." class="w-full p-2 border-2 border-gray-200 rounded-lg">
+        </div>
+        
+        <div class="pt-7">
+            <button onclick="loadLeads()" class="btn-primary">
+                <i class="fas fa-sync-alt mr-2"></i>Atualizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Leads -->
+<div class="card">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b-2 border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Cliente</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Contato</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Canal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Data</th>
+                    <th class="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="leads-table">
+                <!-- Será preenchido via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Lead -->
+<div id="modal-lead" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+        <h3 class="text-xl font-bold text-gray-800 mb-4" id="modal-lead-title">Novo Lead</h3>
+        
+        <form id="form-lead">
+            <input type="hidden" id="lead-phone-original">
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-2">Nome</label>
+                    <input type="text" id="lead-name" class="w-full p-3 border-2 border-gray-200 rounded-lg" placeholder="Nome do cliente">
+                </div>
+                
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-2">Telefone *</label>
+                    <input type="text" id="lead-phone" class="w-full p-3 border-2 border-gray-200 rounded-lg" placeholder="5511999999999" required>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700 mb-2">Email</label>
+                <input type="email" id="lead-email" class="w-full p-3 border-2 border-gray-200 rounded-lg" placeholder="email@exemplo.com">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-2">Canal</label>
+                    <select id="lead-canal" class="w-full p-3 border-2 border-gray-200 rounded-lg">
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="web">Web</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-2">Status</label>
+                    <select id="lead-status" class="w-full p-3 border-2 border-gray-200 rounded-lg">
+                        <option value="novo">Novo</option>
+                        <option value="contato">Em Contato</option>
+                        <option value="negociacao">Negociação</option>
+                        <option value="ganho">Ganho</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block font-semibold text-gray-700 mb-2">Observações</label>
+                <textarea id="lead-notes" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg" placeholder="Anotações sobre o lead..."></textarea>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="submit" class="btn-primary flex-1">
+                    <i class="fas fa-save mr-2"></i>Salvar
+                </button>
+                <button type="button" onclick="closeModalLead()" class="btn-danger flex-1">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allLeads = [];
+    
+    $(document).ready(function() {
+        loadLeads();
+    });
+    
+    function loadLeads() {
+        const status = $('#filter-status').val();
+        const canal = $('#filter-canal').val();
+        
+        let url = '/admin/api/leads?limit=1000';
+        if (status) url += `&status=${status}`;
+        if (canal) url += `&canal=${canal}`;
+        
+        $.get(url, function(data) {
+            allLeads = data;
+            updateStats(data);
+            renderLeads(data);
+        });
+    }
+    
+    function updateStats(leads) {
+        const stats = {
+            total: leads.length,
+            novo: leads.filter(l => l.status === 'novo').length,
+            contato: leads.filter(l => l.status === 'contato').length,
+            negociacao: leads.filter(l => l.status === 'negociacao').length,
+            ganho: leads.filter(l => l.status === 'ganho').length
+        };
+        
+        $('#stat-total').text(stats.total);
+        $('#stat-novo').text(stats.novo);
+        $('#stat-contato').text(stats.contato);
+        $('#stat-negociacao').text(stats.negociacao);
+        $('#stat-ganho').text(stats.ganho);
+    }
+    
+    function renderLeads(leads) {
+        const tbody = $('#leads-table');
+        tbody.empty();
+        
+        if (!leads || leads.length === 0) {
+            tbody.append('<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum lead encontrado</td></tr>');
+            return;
+        }
+        
+        leads.forEach(lead => {
+            const statusBadge = {
+                'novo': '<span class="badge badge-success">Novo</span>',
+                'contato': '<span class="badge badge-info">Em Contato</span>',
+                'negociacao': '<span class="badge badge-warning">Negociação</span>',
+                'ganho': '<span class="badge" style="background:#D1FAE5;color:#065F46">Ganho</span>',
+                'perdido': '<span class="badge badge-danger">Perdido</span>'
+            }[lead.status] || '<span class="badge badge-info">-</span>';
+            
+            const canalIcon = {
+                'whatsapp': '<i class="fab fa-whatsapp text-green-600"></i>',
+                'instagram': '<i class="fab fa-instagram text-pink-600"></i>',
+                'web': '<i class="fas fa-globe text-blue-600"></i>'
+            }[lead.canal] || '<i class="fas fa-comment"></i>';
+            
+            const data = lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '-';
+            
+            tbody.append(`
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4">
+                        <div class="font-semibold text-gray-800">${lead.name || 'Sem nome'}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="text-sm text-gray-600">${lead.phone}</div>
+                        ${lead.email ? `<div class="text-xs text-gray-500">${lead.email}</div>` : ''}
+                    </td>
+                    <td class="py-3 px-4 text-center">${canalIcon}</td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                    <td class="py-3 px-4 text-sm text-gray-500">${data}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick='editLead(${JSON.stringify(lead)})' class="text-blue-600 hover:text-blue-700" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteLead('${lead.phone}')" class="text-red-600 hover:text-red-700" title="Remover">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+    
+    function filterLeads() {
+        const search = $('#search-lead').val().toLowerCase();
+        if (!search) {
+            renderLeads(allLeads);
+            return;
+        }
+        
+        const filtered = allLeads.filter(lead => 
+            (lead.name && lead.name.toLowerCase().includes(search)) ||
+            (lead.phone && lead.phone.toLowerCase().includes(search)) ||
+            (lead.email && lead.email.toLowerCase().includes(search))
+        );
+        
+        renderLeads(filtered);
+    }
+    
+    function showAddLead() {
+        $('#modal-lead-title').text('Novo Lead');
+        $('#lead-phone-original').val('');
+        $('#lead-name, #lead-phone, #lead-email, #lead-notes').val('');
+        $('#lead-canal').val('whatsapp');
+        $('#lead-status').val('novo');
+        $('#modal-lead').removeClass('hidden');
+    }
+    
+    function editLead(lead) {
+        $('#modal-lead-title').text('Editar Lead');
+        $('#lead-phone-original').val(lead.phone);
+        $('#lead-name').val(lead.name || '');
+        $('#lead-phone').val(lead.phone);
+        $('#lead-email').val(lead.email || '');
+        $('#lead-canal').val(lead.canal);
+        $('#lead-status').val(lead.status);
+        $('#lead-notes').val(lead.notes || '');
+        $('#modal-lead').removeClass('hidden');
+    }
+    
+    function closeModalLead() {
+        $('#modal-lead').addClass('hidden');
+    }
+    
+    $('#form-lead').submit(function(e) {
+        e.preventDefault();
+        
+        const originalPhone = $('#lead-phone-original').val();
+        const phone = $('#lead-phone').val().trim();
+        
+        const data = {
+            phone: phone,
+            name: $('#lead-name').val().trim(),
+            email: $('#lead-email').val().trim(),
+            canal: $('#lead-canal').val(),
+            status: $('#lead-status').val(),
+            notes: $('#lead-notes').val().trim()
+        };
+        
+        const url = originalPhone ? `/admin/api/leads/${originalPhone}` : '/admin/api/leads';
+        const method = originalPhone ? 'PUT' : 'POST';
+        
+        $.ajax({
+            url: url,
+            method: method,
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                alert('✅ Lead salvo com sucesso!');
+                closeModalLead();
+                loadLeads();
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Erro ao salvar lead';
+                alert('❌ ' + error);
+            }
+        });
+    });
+    
+    function deleteLead(phone) {
+        if (!confirm('Tem certeza que deseja remover este lead?')) return;
+        
+        $.ajax({
+            url: `/admin/api/leads/${phone}`,
+            method: 'DELETE',
+            success: function(data) {
+                alert('✅ Lead removido!');
+                loadLeads();
+            },
+            error: function(xhr) {
+                alert('❌ Erro ao remover lead');
+            }
+        });
+    }
+</script>
+{% endblock %}
