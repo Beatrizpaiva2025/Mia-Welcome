@@ -1,247 +1,175 @@
-# ============================================================
-# ROTAS DE CONTROLE DO BOT
-# ============================================================
-# Controle de:
-# - Ligar/Desligar Bot
-# - Ativar/Desativar Canais
-# - Conversas em Tempo Real
-# - Modo de Atendimento (IA/Humano)
-# ============================================================
+"""
+admin_controle_routes.py - Rotas para controle do bot (Liga/Desliga)
+"""
 
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime
 import logging
 
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["controle"])
 templates = Jinja2Templates(directory="templates")
 
-# Importar banco de dados
-from admin_training_routes import get_database
-db = get_database()
+router = APIRouter(prefix="/admin/controle", tags=["Admin Control"])
 
-# ============================================================
-# HELPER FUNCTIONS
-# ============================================================
-def get_current_user(request: Request):
-    username = request.session.get('username')
-    if not username:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return username
+# Importar database do admin_training_routes
+from admin_training_routes import db
 
-# ============================================================
-# PÁGINA DE CONTROLE
-# ============================================================
-@router.get("/controle", response_class=HTMLResponse)
-async def controle_page(request: Request):
-    """Página de controle do bot"""
+# ==================================================================
+# FUNÇÕES DE CONTROLE DO BOT
+# ==================================================================
+
+async def get_bot_status():
+    """Retorna status atual do bot (ativo/inativo)"""
     try:
-        username = get_current_user(request)
-        
-        # Buscar status do bot
-        bot_config = await db.bot_config.find_one({"_id": "global_status"})
-        bot_enabled = bot_config.get("enabled", True) if bot_config else True
-        
-        # Buscar status dos canais
-        whatsapp_config = await db.channel_config.find_one({"canal": "whatsapp"})
-        instagram_config = await db.channel_config.find_one({"canal": "instagram"})
-        web_config = await db.channel_config.find_one({"canal": "web"})
-        
-        canais = {
-            "whatsapp": whatsapp_config.get("enabled", True) if whatsapp_config else True,
-            "instagram": instagram_config.get("enabled", False) if instagram_config else False,
-            "web": web_config.get("enabled", False) if web_config else False
-        }
-        
-        return templates.TemplateResponse("controle.html", {
-            "request": request,
-            "username": username,
-            "bot_enabled": bot_enabled,
-            "canais": canais
-        })
-    except HTTPException:
-        return RedirectResponse(url="/admin/login")
+        config = await db.bot_config.find_one({"_id": "global_status"})
+        if not config:
+            # Criar configuração padrão se não existir
+            config = {
+                "_id": "global_status",
+                "ia_ativa": True,
+                "modo_manutencao": False,
+                "updated_at": datetime.now()
+            }
+            await db.bot_config.insert_one(config)
+        return config
     except Exception as e:
-        logger.error(f"❌ Erro ao carregar página de controle: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro ao buscar status do bot: {e}")
+        return {"ia_ativa": True, "modo_manutencao": False}
 
-# ============================================================
-# API: LIGAR/DESLIGAR BOT
-# ============================================================
-@router.post("/api/bot/toggle")
-async def toggle_bot(request: Request):
-    """Liga ou desliga o bot"""
+async def set_bot_status(ia_ativa: bool = None, modo_manutencao: bool = None):
+    """Atualiza status do bot"""
     try:
-        get_current_user(request)
-        data = await request.json()
-        enabled = data.get("enabled", True)
+        update_data = {"updated_at": datetime.now()}
+        if ia_ativa is not None:
+            update_data["ia_ativa"] = ia_ativa
+        if modo_manutencao is not None:
+            update_data["modo_manutencao"] = modo_manutencao
         
         await db.bot_config.update_one(
             {"_id": "global_status"},
-            {"$set": {"enabled": enabled, "last_update": datetime.now()}},
+            {"$set": update_data},
             upsert=True
         )
-        
-        status_text = "ATIVADO" if enabled else "DESATIVADO"
-        logger.info(f"✅ Bot {status_text}")
-        
-        return JSONResponse({
-            "success": True,
-            "enabled": enabled,
-            "message": f"Bot {status_text.lower()} com sucesso"
-        })
-    except HTTPException as e:
-        return JSONResponse({"error": str(e.detail)}, status_code=e.status_code)
+        logger.info(f"Status do bot atualizado: {update_data}")
+        return True
     except Exception as e:
-        logger.error(f"❌ Erro ao alternar bot: {e}")
+        logger.error(f"Erro ao atualizar status do bot: {e}")
+        return False
+
+# ==================================================================
+# ROTAS DA PÁGINA
+# ==================================================================
+
+@router.get("/", response_class=HTMLResponse)
+async def admin_controle_page(request: Request):
+    """Página de controle do bot"""
+    try:
+        return templates.TemplateResponse("admin_controle.html", {
+            "request": request
+        })
+    except Exception as e:
+        logger.error(f"Erro ao carregar página de controle: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
-# ============================================================
-# API: ATIVAR/DESATIVAR CANAL
-# ============================================================
-@router.post("/api/canal/toggle")
-async def toggle_canal(request: Request):
-    """Ativa ou desativa um canal"""
+# ==================================================================
+# API ENDPOINTS
+# ==================================================================
+
+@router.get("/api/status")
+async def api_get_status():
+    """Retorna status atual do bot"""
     try:
-        get_current_user(request)
+        config = await get_bot_status()
+        return {
+            "ia_ativa": config.get("ia_ativa", True),
+            "modo_manutencao": config.get("modo_manutencao", False)
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar status: {e}")
+        return {"ia_ativa": True, "modo_manutencao": False}
+
+@router.post("/api/toggle-ia")
+async def api_toggle_ia(request: Request):
+    """Liga/desliga a IA"""
+    try:
         data = await request.json()
-        canal = data.get("canal", "").lower()
-        enabled = data.get("enabled", False)
+        ativo = data.get("ativo", True)
         
-        if canal not in ["whatsapp", "instagram", "web"]:
-            return JSONResponse({"error": "Canal inválido"}, status_code=400)
+        success = await set_bot_status(ia_ativa=ativo)
         
-        await db.channel_config.update_one(
-            {"canal": canal},
-            {"$set": {"enabled": enabled, "last_update": datetime.now()}},
-            upsert=True
-        )
-        
-        status_text = "ATIVADO" if enabled else "DESATIVADO"
-        logger.info(f"✅ Canal {canal} {status_text}")
-        
-        return JSONResponse({
-            "success": True,
-            "canal": canal,
-            "enabled": enabled,
-            "message": f"Canal {canal} {status_text.lower()} com sucesso"
-        })
-    except HTTPException as e:
-        return JSONResponse({"error": str(e.detail)}, status_code=e.status_code)
+        if success:
+            logger.info(f"IA {'ativada' if ativo else 'desativada'}")
+            return {"success": True, "ia_ativa": ativo}
+        else:
+            return {"success": False, "error": "Erro ao atualizar status"}
     except Exception as e:
-        logger.error(f"❌ Erro ao alternar canal: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
+        logger.error(f"Erro ao toggle IA: {e}")
+        return {"success": False, "error": str(e)}
 
-# ============================================================
-# API: CONVERSAS EM TEMPO REAL
-# ============================================================
-@router.get("/api/conversas/tempo-real")
-async def conversas_tempo_real(request: Request):
-    """Retorna conversas ativas/recentes para monitoramento"""
+@router.post("/api/toggle-manutencao")
+async def api_toggle_manutencao(request: Request):
+    """Liga/desliga modo manutenção"""
     try:
-        get_current_user(request)
+        data = await request.json()
+        ativo = data.get("ativo", False)
         
-        # Buscar conversas das últimas 24 horas
-        ontem = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        success = await set_bot_status(modo_manutencao=ativo)
         
-        # Agrupar por cliente (phone) e pegar última mensagem
-        pipeline = [
-            {"$match": {"timestamp": {"$gte": ontem}}},
-            {"$sort": {"timestamp": -1}},
-            {"$group": {
-                "_id": {"phone": "$phone", "canal": "$canal"},
-                "last_message": {"$first": "$message"},
-                "last_timestamp": {"$first": "$timestamp"},
-                "last_role": {"$first": "$role"},
-                "mode": {"$first": "$mode"},
-                "message_count": {"$sum": 1}
-            }},
-            {"$sort": {"last_timestamp": -1}},
-            {"$limit": 50}
-        ]
+        if success:
+            logger.info(f"Modo manutenção {'ativado' if ativo else 'desativado'}")
+            return {"success": True, "modo_manutencao": ativo}
+        else:
+            return {"success": False, "error": "Erro ao atualizar status"}
+    except Exception as e:
+        logger.error(f"Erro ao toggle manutenção: {e}")
+        return {"success": False, "error": str(e)}
+
+@router.get("/api/stats")
+async def api_get_stats():
+    """Retorna estatísticas do dia"""
+    try:
+        # Buscar conversas de hoje
+        hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
-        conversas = await db.conversas.aggregate(pipeline).to_list(length=50)
+        conversas_hoje = await db.conversations.count_documents({
+            "created_at": {"$gte": hoje}
+        })
         
-        # Formatar resultado
-        result = []
+        # Contar mensagens de hoje (aproximado pelo número de conversas * 5)
+        mensagens_hoje = conversas_hoje * 5
+        
+        return {
+            "mensagens": mensagens_hoje,
+            "conversas": conversas_hoje
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas: {e}")
+        return {"mensagens": 0, "conversas": 0}
+
+@router.get("/api/logs")
+async def api_get_logs():
+    """Retorna logs recentes do sistema"""
+    try:
+        # Buscar últimas 20 conversas para simular logs
+        conversas = await db.conversations.find().sort("created_at", -1).limit(20).to_list(20)
+        
+        logs = []
         for conv in conversas:
-            result.append({
-                "phone": conv["_id"]["phone"],
-                "canal": conv["_id"]["canal"],
-                "last_message": conv["last_message"],
-                "last_timestamp": conv["last_timestamp"].isoformat() if isinstance(conv["last_timestamp"], datetime) else str(conv["last_timestamp"]),
-                "last_role": conv["last_role"],
-                "mode": conv.get("mode", "ai"),
-                "message_count": conv["message_count"]
-            })
+            phone = conv.get("phone", "Unknown")
+            created = conv.get("created_at", datetime.now())
+            status = conv.get("human_mode", False)
+            
+            if status:
+                logs.append(f"[{created.strftime('%H:%M:%S')}] 🔴 {phone} - Transferred to human")
+            else:
+                logs.append(f"[{created.strftime('%H:%M:%S')}] 🟢 {phone} - AI responding")
         
-        return JSONResponse(result)
-    except HTTPException as e:
-        return JSONResponse({"error": str(e.detail)}, status_code=e.status_code)
+        return {"logs": logs}
     except Exception as e:
-        logger.error(f"❌ Erro ao buscar conversas em tempo real: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-# ============================================================
-# API: TRANSFERIR PARA HUMANO/IA
-# ============================================================
-@router.post("/api/conversa/transfer")
-async def transfer_conversa(request: Request):
-    """Transfere conversa entre IA e humano"""
-    try:
-        get_current_user(request)
-        data = await request.json()
-        
-        phone = data.get("phone", "")
-        canal = data.get("canal", "whatsapp")
-        mode = data.get("mode", "ai")  # "ai" ou "human"
-        
-        if not phone:
-            return JSONResponse({"error": "Telefone é obrigatório"}, status_code=400)
-        
-        if mode not in ["ai", "human"]:
-            return JSONResponse({"error": "Modo inválido"}, status_code=400)
-        
-        # Atualizar modo de todas as conversas deste cliente
-        result = await db.conversas.update_many(
-            {"phone": phone, "canal": canal},
-            {"$set": {"mode": mode, "transferred_at": datetime.now()}}
-        )
-        
-        mode_text = "IA" if mode == "ai" else "HUMANO"
-        logger.info(f"✅ Conversa {phone} ({canal}) transferida para {mode_text}")
-        
-        return JSONResponse({
-            "success": True,
-            "phone": phone,
-            "canal": canal,
-            "mode": mode,
-            "message": f"Conversa transferida para {mode_text}"
-        })
-    except HTTPException as e:
-        return JSONResponse({"error": str(e.detail)}, status_code=e.status_code)
-    except Exception as e:
-        logger.error(f"❌ Erro ao transferir conversa: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-# ============================================================
-# PÁGINA: CONVERSAS EM TEMPO REAL
-# ============================================================
-@router.get("/conversas-tempo-real", response_class=HTMLResponse)
-async def conversas_tempo_real_page(request: Request):
-    """Página de monitoramento de conversas em tempo real"""
-    try:
-        username = get_current_user(request)
-        
-        return templates.TemplateResponse("conversas_tempo_real.html", {
-            "request": request,
-            "username": username
-        })
-    except HTTPException:
-        return RedirectResponse(url="/admin/login")
-    except Exception as e:
-        logger.error(f"❌ Erro ao carregar página de conversas: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro ao buscar logs: {e}")
+        return {"logs": ["Error loading logs"]}
