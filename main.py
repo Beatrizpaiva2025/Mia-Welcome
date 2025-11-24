@@ -26,6 +26,7 @@ import os
 import httpx
 from openai import AsyncOpenAI
 from datetime import datetime, timedelta
+import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
 from typing import Optional, Dict, Any, List
@@ -88,7 +89,7 @@ WEBCHAT_ENABLED = os.getenv("WEBCHAT_ENABLED", "false").lower() == "true"
 class Message(BaseModel):
     phone: str
     message: str
-    timestamp: datetime = datetime.now()
+    timestamp: chamar  = chamar .now()
     role: str = "user"
     message_type: str = "text"
     canal: str = "whatsapp"
@@ -133,7 +134,7 @@ async def set_channel_status(canal: str, enabled: bool):
     try:
         await db.channel_config.update_one(
             {"canal": canal},
-            {"$set": {"enabled": enabled, "last_update": datetime.now()}},
+            {"$set": {"enabled": enabled, "last_update": chamar .now()}},
             upsert=True
         )
         logger.info(f"✅ Canal {canal} {'ATIVADO' if enabled else 'DESATIVADO'}")
@@ -465,7 +466,8 @@ async def generate_ai_response(phone: str, user_message: str, canal: str = "what
     """Gera resposta usando OpenAI"""
     try:
         training = await get_bot_training()
-        
+        logger.info(f"📚 Treinamento: {training[:200]}...")
+       
         # Buscar histórico
         historico = await db.conversas.find({"phone": phone, "canal": canal}).sort("timestamp", -1).limit(10).to_list(length=10)
         historico.reverse()
@@ -479,14 +481,25 @@ async def generate_ai_response(phone: str, user_message: str, canal: str = "what
             })
         
         messages.append({"role": "user", "content": user_message})
+        # Buscar delay configurado
+        bot = await db.bots.find_one({"name": "Mia"})
+        response_delay = 3
+        if bot and bot.get("personality", {}).get("response_delay"):
+            response_delay = int(bot["personality"]["response_delay"])
         
+        logger.info(f"⏱️ Aguardando {response_delay} segundos...")
+        await asyncio.sleep(response_delay)
+              
         response = await openai_client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
             temperature=0.7,
             max_tokens=500
         )
-        
+                reply = response.choices[0].message.content
+        logger.info(f"🤖 Resposta: {reply[:100]}...")
+        return reply
+
         return response.choices[0].message.content
     except Exception as e:
         logger.error(f"❌ Erro ao gerar resposta: {e}")
